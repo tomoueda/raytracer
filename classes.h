@@ -1,4 +1,5 @@
 #include <vector>
+#include <stdlib.h>
 
 class Vector;
 class Normal;
@@ -7,47 +8,70 @@ class Shape;
 class Material;
 class Intersection;
 
-
-
 class Vector {
+    friend class Point;
+    friend class Color;
     float _x, _y, _z;
 public:
+    Vector();
     Vector(float x, float y, float z);
     Vector & operator+(Vector &v);
+    void operator+=(Vector &v);
     Vector & operator-(Vector &v);
+    void operator-=(Vector &v);
     Vector & operator*(float scalar);
+    void operator*=(float scalar);
     Vector & operator/(float scalar);
+    void operator/=(float scalar);
+    bool operator==(const Vector &v) const;
+    bool operator!=(const Vector &v) const;
     Normal & normalize();
+    void setValue(float x, float y, float z);
+    void debug();
 };
 
 class Normal {
-    float x, y, z;
+    float _x, _y, _z;
 public:
+    Normal();
     Normal(float x, float y, float z);
+    void normalize();
     Normal & operator+(Normal &n);
     Normal & operator-(Normal &n);
+    void operator+=(Normal &n);
+    void operator-=(Normal &n);
+    bool operator==(const Normal& n) const;
+    bool operator!=(const Normal& n) const;
+    void debug();
 };
 
 class Point {
-    float x, y, z;
+    float _x, _y, _z;
 public:
+    Point();
     Point(float x, float y, float z);
     Point & operator+(Vector &v);
     Point & operator-(Vector &v);
+    void operator+=(Vector &v);
+    void operator-=(Vector &v);
     Vector & operator - (Point &p);
+    bool operator==(const Point& p) const;
+    bool operator!=(const Point& p) const;
+    void debug();
 };
 
 class Ray {
-    Point pos;
-    Vector dir;
-    float t_min, t_max;
+    Point _pos;
+    Vector _dir;
+    float _t_min, _t_max;
 public:
     Ray(Point &pos, Vector &dir, float t_min, float t_max);
+    float get_t_min();
+    float get_t_max();
 };
 
 class Matrix {
     float mat[4][4];
-    void invert();
 };
 
 class Rotation: public Matrix {
@@ -76,34 +100,54 @@ public:
 };
 
 class Color {
-    float r, g, b;
+    float _r, _g, _b;
 public:
+    Color();
+    Color(float r, float g, float b);
     Color &operator+(Color &c);
     Color &operator-(Color &c);
+    Color &operator*(Color &c);
+    Color &operator/(Color &c);
+    void operator+=(Color &c);
+    void operator-=(Color &c);
+    void operator*=(Color &c);
+    void operator/=(Color &c);
     Color &operator*(float s);
     Color &operator/(float s);
+    void operator*=(float s);
+    void operator/=(float s);
+    void setValue(float r, float g, float b);
+    bool operator==(const Color& c) const;
+    bool operator!=(const Color& c) const;
+    void debug();
+    void convert(Vector &v);
 };
 
 class BRDF {
-    Color *kd;
-    Color *ks;
-    Color *ka;
-    Color *kr;
+    Color _kd, _ks, _ka, _kr;
 public:
     BRDF(Color &kd, Color &ks, Color &ka, Color &kr);
+    Color& get_kd();
+    Color& get_ks();
+    Color& get_ka();
+    Color& get_kr();
 };
 
 class Sample {
-    float x, y;
+    float _x, _y;
 public:
     Sample(float x, float y);
+    float get_x();
+    float get_y();
 };
 
 class LocalGeo {
-    Point *pos;
-    Normal *normal;
+    Point _pos;
+    Normal _normal;
 public:
     LocalGeo(Point &pos, Point &normal);
+    Point& get_pos();
+    Normal& get_norm();
 };
 
 /***** Other Classes *****/
@@ -116,8 +160,11 @@ public:
 };
 
 class Intersection {
-    LocalGeo localGeo;
-    Primitive *primitive;
+    LocalGeo _localGeo;
+    Primitive* _primitive;
+public:
+    Intersection(LocalGeo &localGeo, Primitive *primitive);
+    LocalGeo& 
 };
 
 class GeometricPrimitive: public Primitive {
