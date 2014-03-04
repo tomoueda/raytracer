@@ -35,3 +35,7 @@ fulltest:
 
 unittest:
 	GLOG_logtostderr=1 ./test
+
+all:
+	make
+	make test

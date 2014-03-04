@@ -9,6 +9,7 @@
 #include <GraphicsMagick/Magick++.h>
 #include <CImg.h>
 #include "as2.h"
+#include "classes.h"
 
 using namespace std;
 /*
@@ -26,21 +27,25 @@ DEFINE_bool(unittest, false, "set equal to one in order to run unit test.");
     Global Variables
 */
 /** Image size width. **/
-unsigned int width;
+unsigned int width = 640;
 /** Image size height.**/
-unsigned int height;
+unsigned int height = 480;
 /** The maximum number of bounces for the ray **/
-unsigned int depth;
+unsigned int depth = 5;
 /** Output file name. **/
-std::string filename;
+const char* filename;
 /** The camera origin. **/
 float lookfromx, lookfromy, lookfromz;
 /** The direction we are looking at. **/
 float lookatx, lookaty, lookatz;
-/** DON'T REALLY KNOW WHAT THIS IS FOR. **/
+/** Which way is up from a camera. **/
 float upx, upy, upz;
 /** Field of View. **/
 float fov;
+/** A list of primitives. **/
+vector<Primitive*> primitives;
+/** A list of vertex, stored as points. **/
+vector<Point*> vertexes;
 
  
 
@@ -85,10 +90,8 @@ void parseInputLine(std::vector<std::string> line) {
     } else if (!line.at(0).compare("maxdepth")) {
         depth = atoi(line.at(1).c_str());
     } else if (!line.at(0).compare("output")) {
-        filename = line.at(1);
-        LOG(INFO) << "still works?";
+        filename = line.at(1).c_str();
     } else if (!line.at(0).compare("camera")) {
-        LOG(INFO) << "so we work here?";
         lookfromx = atof(line.at(1).c_str());
         lookfromy = atof(line.at(2).c_str());
         lookfromz = atof(line.at(3).c_str());
@@ -99,6 +102,21 @@ void parseInputLine(std::vector<std::string> line) {
         upy = atof(line.at(8).c_str());
         upz = atof(line.at(9).c_str());
         fov = atof(line.at(10).c_str());
+    } else if (!line.at(0).compare("sphere")) {
+        // float x = atof(line.at(1).c_str());
+        // float y = atof(line.at(2).c_str());
+        // float z = atof(line.at(3).c_str());
+        // float radius = atof(line.at(4).c_str());
+        // Point center(x, y, z);
+        // Sphere* sphere = new Sphere(center, radius);
+        // Transformation* t = new Transformation();
+        // primitives.push_back(sphere);
+    } else if (!line.at(0).compare("vertex")) {
+        // float x = atof(line.at(1).c_str());
+        // float y = atof(line.at(2).c_str());
+        // float z = atof(line.at(3).c_str());
+        // Point* vertex = new Point(x, y, z);
+        // vertexes.push_back(vertex);
     }
 }
 
@@ -131,6 +149,7 @@ int main(int argc, char **argv) {
         ::testing::InitGoogleTest(&argc, argv);
         return RUN_ALL_TESTS();
     }
+
     return 0;
 }
 
