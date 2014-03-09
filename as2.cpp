@@ -30,22 +30,28 @@ DEFINE_bool(unittest, false, "set equal to one in order to run unit test.");
 unsigned int width = 640;
 /** Image size height.**/
 unsigned int height = 480;
+/** Our sampler to generate sample points. **/
+Sampler sampler;
 /** The maximum number of bounces for the ray **/
 unsigned int depth = 5;
 /** Output file name. **/
-const char* filename;
-/** The camera origin. **/
-float lookfromx, lookfromy, lookfromz;
-/** The direction we are looking at. **/
-float lookatx, lookaty, lookatz;
-/** Which way is up from a camera. **/
-float upx, upy, upz;
-/** Field of View. **/
-float fov;
+string filename;
+/** The camera used for the scene. **/
+Camera camera;
 /** A list of primitives. **/
 vector<Primitive*> primitives;
 /** A list of vertex, stored as points. **/
-vector<Point*> vertexes;
+vector<Point> vertexes;
+/** A boolean to check whether the next transformation will be added. **/
+bool canPush = false;
+/** Our current TransMatrix **/
+TransMatrix currMatrix;
+/** Lights stored in a vector. **/
+vector<Light*> lights;
+/** The current colors. **/
+Color kd, ks, ka, kr;
+/** The shininess. **/
+float sp;
 
  
 
@@ -57,12 +63,10 @@ vector<Point*> vertexes;
 void parseInput() {
     if (FLAGS_input.compare("null")) {
         ifstream file(FLAGS_input.c_str());
-        LOG(INFO) << "We are here";
         if (!file) {
             printf("%s does not exist, please make sure you're file name is correct", FLAGS_input.c_str());
             exit(EXIT_FAILURE);
         } else {
-            LOG(INFO) << "We are here";
             string line;
             vector<string> parsedline;
             while (getline(file, line)) {
@@ -73,7 +77,6 @@ void parseInput() {
                     }
                 }
             }
-            LOG(INFO) << "WE NO HERE";
         }
     } else {
         printf("There were no file input, please input a file.\n");
@@ -83,41 +86,145 @@ void parseInput() {
 
 /** Takes in LINE which then parses according to the input. **/
 void parseInputLine(std::vector<std::string> line) {
-    LOG(INFO) << line.at(0);
     if (!line.at(0).compare("size")) {
         width = atoi(line.at(1).c_str());
         height = atoi(line.at(2).c_str());
+        sampler = *new Sampler(width, height);
     } else if (!line.at(0).compare("maxdepth")) {
         depth = atoi(line.at(1).c_str());
     } else if (!line.at(0).compare("output")) {
-        filename = line.at(1).c_str();
+        filename = line.at(1);
+        LOG(INFO) << filename;
     } else if (!line.at(0).compare("camera")) {
-        lookfromx = atof(line.at(1).c_str());
-        lookfromy = atof(line.at(2).c_str());
-        lookfromz = atof(line.at(3).c_str());
-        lookatx = atof(line.at(4).c_str());
-        lookaty = atof(line.at(5).c_str());
-        lookatz = atof(line.at(6).c_str());
-        upx = atof(line.at(7).c_str());
-        upy = atof(line.at(8).c_str());
-        upz = atof(line.at(9).c_str());
-        fov = atof(line.at(10).c_str());
+        float lookfromx = atof(line.at(1).c_str());
+        float lookfromy = atof(line.at(2).c_str());
+        float lookfromz = atof(line.at(3).c_str());
+        Point lookfrom(lookfromx, lookfromy, lookfromz);
+        float lookatx = atof(line.at(4).c_str());
+        float lookaty = atof(line.at(5).c_str());
+        float lookatz = atof(line.at(6).c_str());
+        Point lookat(lookatx, lookaty, lookatz);
+        float upx = atof(line.at(7).c_str());
+        float upy = atof(line.at(8).c_str());
+        float upz = atof(line.at(9).c_str());
+        Vector up(upx, upy, upz);
+        float fov = atof(line.at(10).c_str());
+        camera = *new Camera(width, height, lookfrom, lookat, up, fov);
     } else if (!line.at(0).compare("sphere")) {
-        // float x = atof(line.at(1).c_str());
-        // float y = atof(line.at(2).c_str());
-        // float z = atof(line.at(3).c_str());
-        // float radius = atof(line.at(4).c_str());
-        // Point center(x, y, z);
-        // Sphere* sphere = new Sphere(center, radius);
-        // Transformation* t = new Transformation();
-        // primitives.push_back(sphere);
+        float x = atof(line.at(1).c_str());
+        float y = atof(line.at(2).c_str());
+        float z = atof(line.at(3).c_str());
+        float radius = atof(line.at(4).c_str());
+        Point center(x, y, z);
+        Sphere* sphere = new Sphere(center, radius);
+        Transformation t(currMatrix);
+        BRDF brdf(kd, ks, ka, kr, sp);
+        Material* material = new Material(brdf);
+        GeometricPrimitive* s = new GeometricPrimitive(t, sphere, material);
+        primitives.push_back(s);
     } else if (!line.at(0).compare("vertex")) {
-        // float x = atof(line.at(1).c_str());
-        // float y = atof(line.at(2).c_str());
-        // float z = atof(line.at(3).c_str());
-        // Point* vertex = new Point(x, y, z);
-        // vertexes.push_back(vertex);
+        float x = atof(line.at(1).c_str());
+        float y = atof(line.at(2).c_str());
+        float z = atof(line.at(3).c_str());
+        Point vertex(x, y, z);
+        vertexes.push_back(vertex);
+    } else if (!line.at(0).compare("tri")) {
+        Point v1 = vertexes.at(atoi(line.at(1).c_str()));
+        Point v2 = vertexes.at(atoi(line.at(2).c_str()));
+        Point v3 = vertexes.at(atoi(line.at(3).c_str()));
+        Triangle* tri = new Triangle(v1, v2, v3);
+        Transformation t(currMatrix);
+        BRDF brdf(kd, ks, ka, kr, sp);
+        Material* material = new Material(brdf);
+        GeometricPrimitive* triangle = new GeometricPrimitive(t, tri, material);
+        primitives.push_back(triangle); 
+    } else if (!line.at(0).compare("pushTransform")) {
+        canPush = true;
+    } else if (!line.at(0).compare("popTransform")) {
+        currMatrix = *new TransMatrix();
+        canPush = false;
+    } else if (!line.at(0).compare("translate")) {
+        if (canPush) {
+            float x = atof(line.at(1).c_str());
+            float y = atof(line.at(2).c_str());
+            float z = atof(line.at(3).c_str());
+            currMatrix.add_translation(x, y, z);
+        }
+    } else if (!line.at(0).compare("rotate")) {
+        if (canPush) {
+            float x = atof(line.at(1).c_str());
+            float y = atof(line.at(2).c_str());
+            float z = atof(line.at(3).c_str());
+            float theta = atof(line.at(4).c_str());
+            Point about(x, y, z);
+            currMatrix.add_rotation(about, theta);
+        }
+    } else if (!line.at(0).compare("scale")) {
+        if (canPush) {
+            float x = atof(line.at(1).c_str());
+            float y = atof(line.at(2).c_str());
+            float z = atof(line.at(3).c_str());
+            currMatrix.add_scaling(x, y, z);
+        }
+    } else if (!line.at(0).compare("directional")) {
+        float x = atof(line.at(1).c_str());
+        float y = atof(line.at(2).c_str());
+        float z = atof(line.at(3).c_str());
+        float r = atof(line.at(4).c_str());
+        float g = atof(line.at(5).c_str());
+        float b = atof(line.at(6).c_str());
+        Vector dir(x, y, z);
+        Color intense(r, g, b);
+        DirectionalLight* light = new DirectionalLight(dir, intense);
+        lights.push_back(light);
+    } else if (!line.at(0).compare("point")) {
+        float x = atof(line.at(1).c_str());
+        float y = atof(line.at(2).c_str());
+        float z = atof(line.at(3).c_str());
+        float r = atof(line.at(4).c_str());
+        float g = atof(line.at(5).c_str());
+        float b = atof(line.at(6).c_str());
+        Point pos(x, y, z);
+        Color intense(r, g, b);
+        PointLight* light = new PointLight(pos, intense);
+        lights.push_back(light);
+    } else if (!line.at(0).compare("diffuse")) {
+        float r = atof(line.at(1).c_str());
+        float g = atof(line.at(2).c_str());
+        float b = atof(line.at(3).c_str());
+        Color intense(r, g, b);
+        kd.setValue(r, g, b);
+    } else if (!line.at(0).compare("specular")) {
+        float r = atof(line.at(1).c_str());
+        float g = atof(line.at(2).c_str());
+        float b = atof(line.at(3).c_str());
+        Color intense(r, g, b);
+        ks.setValue(r, g, b);
+    } else if (!line.at(0).compare("reflect")) {
+        float r = atof(line.at(1).c_str());
+        float g = atof(line.at(2).c_str());
+        float b = atof(line.at(3).c_str());
+        Color intense(r, g, b);
+        kr.setValue(r, g, b);
+    } else if (!line.at(0).compare("ambient")) {
+        float r = atof(line.at(1).c_str());
+        float g = atof(line.at(2).c_str());
+        float b = atof(line.at(3).c_str());
+        Color intense(r, g, b);
+        ka.setValue(r, g, b);
+    } else if (!line.at(0).compare("shininess")) {
+        sp = atof(line.at(1).c_str());
     }
+}
+
+/** Sets up all necessary components and starts rendering. **/
+void render() {
+    AggregatePrimitive agg(primitives);
+    RayTracer rayTracer(agg, lights, camera.getCameraPos());
+    CImg<float> img(width, height, 1, 3);
+    Film film(img, false, filename.c_str());
+    Scene scene(sampler, camera, rayTracer, film, depth);
+    scene.render();
 }
 
 /** A function that splits STRING, by a DELIMiter, and stores it 
@@ -149,44 +256,8 @@ int main(int argc, char **argv) {
         ::testing::InitGoogleTest(&argc, argv);
         return RUN_ALL_TESTS();
     }
+    parseInput();
+    render();
 
     return 0;
-}
-
-
-
-
-
-/** UNIT TESTING. **/
-TEST(utiltesting, split) {
-    std::vector<std::string> test;
-    std::string edge1 = " ";
-    std::string edge2 = " ";
-    test = split(edge1, ' ');
-    LOG(INFO) << test.at(0) << "Are we here?";
-    LOG(INFO) << " ";
-    EXPECT_EQ(0, strcmp(" ", &edge1.at(0))) << "not empty string";
-    test = split(edge2, ' ');
-    LOG(INFO) << test.at(0) << "ARe WE HERE?";
-    LOG(INFO) << " ";
-    EXPECT_EQ(0, strcmp(" ", &edge2.at(0))) << "not empty string 2";
-}
-
-TEST(test1, initialParsingCheck) {
-    FLAGS_input = "test1.txt";
-    parseInput();
-    LOG(INFO) << "We break here.";
-    EXPECT_EQ(width, 400) << "Width is not the right value.";
-    EXPECT_EQ(height, 400);
-    EXPECT_EQ(depth, 5);
-    EXPECT_EQ(lookfromx, 200);
-    EXPECT_EQ(lookfromy, 100);
-    EXPECT_EQ(lookfromz, 200);
-    EXPECT_EQ(lookatx, 400);
-    EXPECT_EQ(lookaty, 200);
-    EXPECT_EQ(lookatz, 300);
-    EXPECT_TRUE(fabs(upx - 1.1) < EPSILON);
-    EXPECT_TRUE(fabs(upy - 2.1) < EPSILON);
-    EXPECT_TRUE(fabs(upz - 3.3) < EPSILON);
-    EXPECT_TRUE(fabs(fov - 18.9) < EPSILON) << "Is this roundoff error?";
 }

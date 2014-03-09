@@ -267,7 +267,7 @@ TEST(classes, transformation) {
 	d = t * d;
 	e = t * e;
 	Point f(5, 7, 12);
-	Vector g(6, 8, 13);
+	Vector g(2, 3, 4);
 	Ray i(f, g, 0, 10);
 	LocalGeo j(f, c);
 	EXPECT_EQ(f, a) << "Testing point trans";
@@ -419,8 +419,9 @@ TEST(final, final_destination) {
 	Camera camera(640, 480, cameraPos, lookingAt, up, fov);
 	TransMatrix mat;
 	Point cen(-1, 0, 0);
-	// mat.add_rotation(cen, pi/2);
 	mat.add_translation(0, 0, -175);
+	// mat.add_rotation(cen, pi/2);
+	// mat.add_scaling(2, 1, 1);
 	Transformation t(mat);
 	Color kd(.8, .8, .3);
 	Color ks(.9, .4, .6);
@@ -436,7 +437,7 @@ TEST(final, final_destination) {
 	float sp2 = 16;
 	BRDF brdf2(kd2, ks2, ka2, kr2, sp2);
 	Material* material2 = new Material(brdf2);
-	Point center1(200.0, 200.0, 200);
+	Point center1(0, -200.0, 0);
 	Point center2(0, 0, 0);
 	Point vertex1(-300, 200, -400);
 	Point vertex2(-600, -300, -100);
@@ -444,9 +445,9 @@ TEST(final, final_destination) {
 	Triangle* triangle = new Triangle(vertex1, vertex2, vertex3);
 	GeometricPrimitive* gamma = new GeometricPrimitive(t, triangle, material);
 
-	Point vertex4(300, 400, 500);
-	Point vertex5(600, -200, 200);
-	Point vertex6(0, -200, 300);
+	Point vertex4(300, 400, 400);
+	Point vertex5(600, -200, 100);
+	Point vertex6(0, -200, 200);
 	Triangle* triangle2 = new Triangle(vertex4, vertex5, vertex6);
 	Point center3(200, 200, 200);
 	float radius3 = 50;
@@ -465,7 +466,7 @@ TEST(final, final_destination) {
 	primitives.push_back(delta);
 	AggregatePrimitive prims(primitives);
 	Point light1 (500, 500, 500);
-	Point light2 (-300, -300, 0);
+	Point light2 (0, -1000, 0);
 	Color l1(1, 1, 1);
 	Color l2(.6, .6, .6);
 	PointLight* lig = new PointLight(light1, l1);
@@ -474,7 +475,7 @@ TEST(final, final_destination) {
 	lights.push_back(lig);
 	lights.push_back(lig2);
 	RayTracer raytracer(prims, lights, cameraPos);
-	CImg<double> img(640, 480, 1, 3);
+	CImg<float> img(640, 480, 1, 3);
 	const char* test = "tester2.jpg";
 	Film film(img, false, test);
 	Scene scene(sampler, camera, raytracer, film, 5);

@@ -21,6 +21,10 @@ inline float max(float a, float b) {
     return b;
 }
 
+CImg<float> scaleForJPG(CImg<float> img) {
+    return ((img - img.max()) / (img.max() - img.min())) * 255;
+}
+
 
 /** Vector Implementation. &v is the actual object thus
     . is allowed, but actual v is a pointer in which case
@@ -490,19 +494,19 @@ Point& Transformation::operator*(Point& p) {
 }
 
 Vector& Transformation::operator*(Vector& v) {
-    Vector4f vec(v.get_x(), v.get_y(), v.get_z(), 1);
+    Vector4f vec(v.get_x(), v.get_y(), v.get_z(), 0);
     vec = _m * vec;
     return *new Vector(vec(0), vec(1), vec(2));
 }
 
 Normal& Transformation::operator*(Normal& n) {
-    Vector4f norm(n.get_x(), n.get_y(), n.get_z(), 1);
+    Vector4f norm(n.get_x(), n.get_y(), n.get_z(), 0);
     norm = _minvt * norm;
     return *new Normal(norm(0), norm(1), norm(2));
 }
 
 Ray& Transformation::operator*(Ray& r) {
-    return *new Ray(*this * r.get_pos(), r.get_dir(), 
+    return *new Ray(*this * r.get_pos(), *this * r.get_dir(), 
         r.get_t_min(), r.get_t_max());
 }
 
@@ -860,12 +864,12 @@ bool Sphere::intersect(Ray& ray, float *thit, LocalGeo* local) {
     float tnew1 = (-b + sqrt(determinant)) / (2*a);
     float tnew2 = (-b - sqrt(determinant)) / (2*a);
     if (tnew1 <= tnew2) {
-        if (tnew1 < mint || tnew1 > maxt) {
+        if (tnew1 < mint || tnew2 > maxt) {
             return false;
         }
         *thit = tnew1;
     } else {
-        if (tnew2 < mint || tnew2 > maxt) {
+        if (tnew2 < mint || tnew1 > maxt) {
             return false;
         }
         *thit = tnew2;
@@ -1081,7 +1085,7 @@ AggregatePrimitive::AggregatePrimitive(std::vector<Primitive*> list) {
 bool AggregatePrimitive::intersect(Ray& ray, float* thit, Intersection* in) {
     bool hit = false;
     for (int i = 0; i < _list.size(); i++) {
-        if(_list.at(i)->intersect(ray, thit, in)) {
+        if (_list.at(i)->intersect(ray, thit, in)) {
             ray.update_tmax(*thit);
             hit = true;
         }
@@ -1091,7 +1095,7 @@ bool AggregatePrimitive::intersect(Ray& ray, float* thit, Intersection* in) {
 
 bool AggregatePrimitive::intersectP(Ray& ray) {
     for (int i = 0; i < _list.size(); i++) {
-        if(_list.at(i)->intersectP(ray)) return true;
+        if (_list.at(i)->intersectP(ray)) return true;
     }
     return false;
 }
@@ -1179,6 +1183,10 @@ void Camera::generateRay(Sample& sample, Ray* ray) {
     ray->update_tmin(0);
     ray->update_tmax(INFINITY);
 }
+
+Point& Camera::getCameraPos() {
+    return _cameraPos;
+}
 /**END IMPLEMENTATION FOR CAMERA. **/
 
 /**BEGIN IMPLEMENTATION FOR RAY TRACER. **/
@@ -1209,7 +1217,7 @@ void RayTracer::trace(Ray& ray, int depth, Color* color) {
             _in.get_primitive()->getBRDF(_in.get_localGeo(), &brdf);
             for (int i = 0; i < _lights.size(); i++) {
                 _lights.at(i)->generateLightRay(_in.get_localGeo(), &lray, &lcolor);
-                if (!_primitives.intersectP(_lray)) {
+                if (!_primitives.intersectP(lray)) {
                     *color += shading(_in.get_localGeo(), brdf, lray, lcolor);
                 }
             }
@@ -1277,7 +1285,7 @@ void DirectionalLight::generateLightRay(LocalGeo& local, Ray* ray, Color* lcolor
     ray->update_origin(local.get_pos());
     ray->update_dir(_dir * -1);
     ray->update_tmax(INFINITY);
-    ray->update_tmin(0.01);
+    ray->update_tmin(1);
     lcolor->setValue(_intensity);
 }
 
@@ -1295,7 +1303,7 @@ void PointLight::generateLightRay(LocalGeo& local, Ray* ray, Color* lcolor) {
     ray->update_dir(_pos - local.get_pos());
     float maxt = _pos.distance(local.get_pos());
     ray->update_tmax(maxt);
-    ray->update_tmin(0.01);
+    ray->update_tmin(0.1);
     lcolor->setValue(_intensity);
 }
 /**END IMPLEMENTATION FOR LIGHTS. **/
@@ -1305,7 +1313,7 @@ Film::Film() {
     //Default constructor.
 }
 
-Film::Film(CImg<double>& img, bool display, const char* filename) {
+Film::Film(CImg<float>& img, bool display, const char* filename) {
     _img = img;
     _filename = filename;
     _display = display;
@@ -1317,7 +1325,6 @@ Film::Film(CImg<double>& img, bool display, const char* filename) {
 void Film::commit(Sample& sample, Color& color) {
     int x = sample.get_x();
     int y = sample.get_y();
-    color = color * 100;
     const float pixel[] = {color.get_r(), color.get_g(), color.get_b()};
     _img.draw_point(x, y, pixel);
     if (_display) {
@@ -1326,6 +1333,8 @@ void Film::commit(Sample& sample, Color& color) {
 }
 
 void Film::writeImage() {
+    LOG(INFO) << _filename;
+    _img = scaleForJPG(_img);
     _img.save_jpeg(_filename);
 }
 /**END IMPLEMENTATION FOR FILM. **/

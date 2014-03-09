@@ -302,6 +302,7 @@ public:
     Camera(int width, int height, Point& pos, Point& looking,
         Vector& up, float fov);
     void generateRay(Sample& sample, Ray *ray);
+    Point& getCameraPos();
 };
 
 class RayTracer {
@@ -346,12 +347,12 @@ public:
 };
 
 class Film {
-    CImg<double> _img;
+    CImg<float> _img;
     const char* _filename;
     bool _display;
 public:
     Film();
-    Film(CImg<double>& img, bool display, const char* filename);
+    Film(CImg<float>& img, bool display, const char* filename);
     void commit(Sample &sample, Color &color);
     void writeImage();
 };
