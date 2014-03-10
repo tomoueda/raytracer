@@ -1,10 +1,10 @@
 size 1080 720
 maxdepth 5
-output inputtester16.jpg
+output inputtester18.jpg
 camera 0 0 500 0 0 300 0 1 0 1.57079632679
-vertex 300 400 400
-vertex 600 -300 100
-vertex 0 -200 200
+vertexnormal 300 400 400 1 0 0
+vertexnormal 600 -300 100 0 1 0
+vertexnormal 0 -200 200 0 0 1
 vertex -300 200 -400
 vertex -600 -300 -100
 vertex 0 -400 -300
@@ -17,17 +17,16 @@ reflect .2 .3 .3
 shininess 16
 pushTransform
 translate 0 0 -175
-rotate -1 0 0 1.57079632679
+# rotate -1 0 0 1.57079632679
 sphere 200 200 200 100
-tri 3 4 5
+tri 0 1 2
 popTransform
 pushTransform
 translate 0 0 -175
-rotate -1 0 0 3.14156
 diffuse .7 .7 .3
 specular .8 .6 .8
 ambient .1 .2 .2
 reflect .3 .3 .3
 shininess 8
 sphere -150 0 0 150
-tri 0 1 2
+trinormal 0 1 2

@@ -208,10 +208,23 @@ public:
 };
 
 /***** Other Classes *****/
+class Vertex {
+    Normal _norm;
+    Point _pos;
+public:
+    Vertex();
+    Vertex(Point& pos, Normal& norm);
+    Normal& get_norm();
+    Point& get_point();
+    void set_norm(Normal& norm);
+    void set_pos(Point& pos);
+};
+
 class Shape {
 public:
     virtual bool intersect(Ray& ray, float* thit, LocalGeo* local) = 0;
     virtual bool intersectP(Ray& ray) = 0;
+    virtual BoundingBox createBoundingBox() = 0;
 };
 
 class Sphere: public Shape {
@@ -221,12 +234,37 @@ public:
     Sphere(Point& center, float radius);
     bool intersect(Ray& ray, float* thit, LocalGeo* local);
     bool intersectP(Ray& ray);
+    Point& getCenter();
+    float getRadius();
 };
 
 class Triangle: public Shape {
     Point _v1, _v2, _v3;
 public:
     Triangle(Point& v1, Point& v2, Point& v3);
+    bool intersect(Ray& ray, float* thit, LocalGeo* local);
+    bool intersectP(Ray& ray);
+    Point& getv1();
+    Point& getv2();
+    Point& getv3();
+};
+
+class VertexTriangle: public Shape {
+    Vertex _v1, _v2, _v3;
+public:
+    VertexTriangle(Vertex& v1, Vertex& v2, Vertex& v3);
+    bool intersect(Ray& ray, float* thit, LocalGeo* local);
+    bool intersectP(Ray& ray);
+    Vertex& getv1();
+    Vertex& getv2();
+    Vertex& getv3();
+};
+
+class BoundingBox: public Shape {
+    float xmin, xmax, ymin, ymax, zmin, zmax;
+public:
+    BoundingBox();
+    BoundingBox(Primitive* primitive);
     bool intersect(Ray& ray, float* thit, LocalGeo* local);
     bool intersectP(Ray& ray);
 };
@@ -236,6 +274,7 @@ public:
     virtual bool intersect(Ray &ray, float *thit, Intersection *in) = 0;
     virtual bool intersectP(Ray &ray) = 0;
     virtual void getBRDF(LocalGeo &local, BRDF *brdf) = 0;
+    virtual BoundingBox createBoundingBox() = 0;
 };
 
 class Intersection {
@@ -260,6 +299,7 @@ public:
     bool intersect(Ray &ray, float *thit, Intersection *in);
     bool intersectP(Ray &ray);
     void getBRDF(LocalGeo &local, BRDF *brdf);
+    BoundingBox createBoundingBox();
 };
 
 class AggregatePrimitive: public Primitive {
@@ -270,6 +310,18 @@ public:
     bool intersect(Ray &ray, float *thit, Intersection *in);
     bool intersectP(Ray &ray);
     void getBRDF(LocalGeo &local, BRDF *brdf);
+    BoundingBox createBoundingBox();
+};
+
+class HBB : public Primitive {
+    Primitive* left;
+    Primitive* right;
+    BoundingBox bbox;
+public:
+    HBB(vector<Primitive*> list, int axis);
+    bool intersect(Ray& ray, float* thit, Intersection* in);
+    bool intersectP(Rar& ray);
+    void getBRDF(LocalGeo& local, BRDF* brdf);
 };
 
 class Material {

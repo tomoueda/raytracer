@@ -42,6 +42,10 @@ Camera camera;
 vector<Primitive*> primitives;
 /** A list of vertex, stored as points. **/
 vector<Point> vertexes;
+/** A list of normalVertexes, stored as vertex. **/
+vector<Vertex> Nvertexes;
+/** A list of normals. **/
+vector<Normal> normals;
 /** A boolean to check whether the next transformation will be added. **/
 bool canPush = false;
 /** Our current TransMatrix **/
@@ -122,12 +126,52 @@ void parseInputLine(std::vector<std::string> line) {
         Material* material = new Material(brdf);
         GeometricPrimitive* s = new GeometricPrimitive(t, sphere, material);
         primitives.push_back(s);
-    } else if (!line.at(0).compare("vertex")) {
+    } else if (!line.at(0).compare("vertex") || !line.at(0).compare("v")) {
         float x = atof(line.at(1).c_str());
         float y = atof(line.at(2).c_str());
         float z = atof(line.at(3).c_str());
         Point vertex(x, y, z);
         vertexes.push_back(vertex);
+    } else if (!line.at(0).compare("vn")) {
+        float x = atof(line.at(1).c_str());
+        float y = atof(line.at(2).c_str());
+        float z = atof(line.at(3).c_str());
+        Normal normal(x, y, z);
+        normals.push_back(normal);
+    } else if (!line.at(0).compare("f")) {
+        vector<string> sv1 = split(line.at(1), '/');
+        vector<string> sv2 = split(line.at(2), '/');
+        vector<string> sv3 = split(line.at(3), '/');
+        Vertex v1(vertexes.at(atoi(sv1.at(0).c_str()) - 1), normals.at(atoi(sv1.at(2).c_str()) - 1));
+        Vertex v2(vertexes.at(atoi(sv2.at(0).c_str()) - 1), normals.at(atoi(sv2.at(2).c_str()) - 1));
+        Vertex v3(vertexes.at(atoi(sv3.at(0).c_str()) - 1), normals.at(atoi(sv3.at(2).c_str()) - 1));
+        VertexTriangle* tri = new VertexTriangle(v1, v2, v3);
+        Transformation t(currMatrix);
+        BRDF brdf(kd, ks, ka, kr, sp);
+        Material* material = new Material(brdf);
+        GeometricPrimitive* vertri = new GeometricPrimitive(t, tri, material);
+        primitives.push_back(vertri);
+    } else if (!line.at(0).compare("vertexnormal")) {
+        float x = atof(line.at(1).c_str());
+        float y = atof(line.at(2).c_str());
+        float z = atof(line.at(3).c_str());
+        float nx = atof(line.at(4).c_str());
+        float ny = atof(line.at(5).c_str());
+        float nz = atof(line.at(6).c_str());
+        Point pos(x, y, z);
+        Normal norm(nx, ny, nz);
+        Vertex vex(pos, norm);
+        Nvertexes.push_back(vex);
+    } else if (!line.at(0).compare("trinormal")) {
+        Vertex v1 = Nvertexes.at(atoi(line.at(1).c_str()));
+        Vertex v2 = Nvertexes.at(atoi(line.at(2).c_str()));
+        Vertex v3 = Nvertexes.at(atoi(line.at(3).c_str()));
+        VertexTriangle* vt = new VertexTriangle(v1, v2, v3);
+        Transformation t(currMatrix);
+        BRDF brdf(kd, ks, ka, kr, sp);
+        Material* material = new Material(brdf);
+        GeometricPrimitive* vtgp = new GeometricPrimitive(t, vt, material);
+        primitives.push_back(vtgp);
     } else if (!line.at(0).compare("tri")) {
         Point v1 = vertexes.at(atoi(line.at(1).c_str()));
         Point v2 = vertexes.at(atoi(line.at(2).c_str()));

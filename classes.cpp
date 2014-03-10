@@ -21,6 +21,31 @@ inline float max(float a, float b) {
     return b;
 }
 
+inline float max(float a, float b, float c) {
+    if (a > b and a > c) {
+        return a;
+    }
+    if (b > c) {
+        return b;
+    }
+    return c;
+}
+
+inline float min(float a, float b) {
+    if (a < b) return a;
+    return b;
+}
+
+inline float min(float a, float b, float c) {
+    if (a < b and a < c) {
+        return a;
+    }
+    if (b < c) {
+        return b;
+    }
+    return c;
+}
+
 CImg<float> scaleForJPG(CImg<float> img) {
     return ((img - img.max()) / (img.max() - img.min())) * 255;
 }
@@ -731,6 +756,32 @@ float Color::get_b() {
 
 /**END IMPLEMENTATION FOR COLOR. **/
 
+/** Begin implementation for vertex. **/
+Vertex::Vertex() {
+}
+
+Vertex::Vertex(Point& pos, Normal& norm) {
+    _pos = pos;
+    _norm = norm;
+}
+
+Point& Vertex::get_point() {
+    return _pos;
+}
+
+Normal& Vertex::get_norm() {
+    return _norm;
+}
+
+void Vertex::set_pos(Point& pos) {
+    _pos = pos;
+}
+
+void Vertex::set_norm(Normal& norm) {
+    _norm = norm;
+}
+/** End implementation for vertex. **/
+
 /**BEGIN IMPLEMENTATION FOR BRDF. **/
 BRDF::BRDF() {
     //empty constructor.
@@ -912,6 +963,14 @@ bool Sphere::intersectP(Ray& ray) {
     return true;
 }
 
+Point& Sphere::getCenter() {
+    return _center;
+}
+
+float Sphere::getRadius() {
+    return _radius;
+}
+
 /** The constructor for triangle takes in V1, V2, V3, which are
     Points but we will represent them as vertices. **/
 Triangle::Triangle(Point& v1, Point& v2, Point& v3) {
@@ -919,6 +978,19 @@ Triangle::Triangle(Point& v1, Point& v2, Point& v3) {
     _v2 = v2;
     _v3 = v3;
 }
+
+Point& Triangle::getv1() {
+    return _v1;
+}
+
+Point& Triangle::getv2() {
+    return _v2;
+}
+
+Point& Triangle::getv3() {
+    return _v3;
+}
+
 
 /** This function takes in RAY a ray and returns true if the ray
     intersects this triangle and false if the ray misses.
@@ -1005,6 +1077,177 @@ bool Triangle::intersectP(Ray& ray) {
     float t = x(2);
     if (gamma + beta > 1 || gamma < 0 || beta < 0 || 
         t < mint || t > maxt) {
+        return false;
+    }
+    return true;
+}
+
+
+VertexTriangle::VertexTriangle(Vertex& v1, Vertex& v2, Vertex& v3) {
+    _v1 = v1;
+    _v2 = v2;
+    _v3 = v3;
+}
+
+bool VertexTriangle::intersect(Ray& ray, float* thit, LocalGeo* local) {
+    float mint = ray.get_t_min();
+    float maxt = ray.get_t_max();
+    Vector g = ray.get_dir() * -1;
+    Vector j = _v2.get_point() - _v1.get_point();
+    Vector k = _v3.get_point() - _v1.get_point();
+    Vector l = ray.get_pos() - _v1.get_point();
+    float gx = g.get_x();
+    float gy = g.get_y();
+    float gz = g.get_z();
+    float jx = j.get_x();
+    float jy = j.get_y();
+    float jz = j.get_z();
+    float kx = k.get_x();
+    float ky = k.get_y();
+    float kz = k.get_z();
+    float lx = l.get_x();
+    float ly = l.get_y();
+    float lz = l.get_z();
+    Matrix3f A;
+    A << jx, kx, gx,
+         jy, ky, gy,
+         jz, kz, gz;
+    Vector3f b(lx, ly, lz);
+    Vector3f x = A.inverse() * b;
+    float gamma = x(0);
+    float beta = x(1);
+    float t = x(2);
+    if (gamma + beta > 1 || gamma < 0 || beta < 0 || 
+        t < mint || t > maxt) {
+        return false;
+    }
+    *thit = t;
+    Point pos = ray.get_pos_with_t(t);
+    float alpha = 1 - (gamma + beta);
+    Normal norm = (_v1.get_norm() * alpha) + (_v2.get_norm() * beta) + (_v3.get_norm() * gamma);
+    local->set_norm(norm);
+    local->set_pos(pos);
+    return true;
+}
+
+bool VertexTriangle::intersectP(Ray& ray) {
+    float mint = ray.get_t_min();
+    float maxt = ray.get_t_max();
+    Vector g = ray.get_dir() * -1;
+    Vector j = _v2.get_point() - _v1.get_point();
+    Vector k = _v3.get_point() - _v1.get_point();
+    Vector l = ray.get_pos() - _v1.get_point();
+    float gx = g.get_x();
+    float gy = g.get_y();
+    float gz = g.get_z();
+    float jx = j.get_x();
+    float jy = j.get_y();
+    float jz = j.get_z();
+    float kx = k.get_x();
+    float ky = k.get_y();
+    float kz = k.get_z();
+    float lx = l.get_x();
+    float ly = l.get_y();
+    float lz = l.get_z();
+    Matrix3f A;
+    A << jx, kx, gx,
+         jy, ky, gy,
+         jz, kz, gz;
+    Vector3f b(lx, ly, lz);
+    Vector3f x = A.inverse() * b;
+    float gamma = x(0);
+    float beta = x(1);
+    float t = x(2);
+    if (gamma + beta > 1 || gamma < 0 || beta < 0 || 
+        t < mint || t > maxt) {
+        return false;
+    }
+    return true;
+}
+
+Vertex& VertexTriangle::getv1() {
+    return _v1;
+}
+
+Vertex& VertexTriangle::getv2() {
+    return _v2;
+}
+
+Vertex& VertexTriangle::getv3() {
+    return _v3;
+}
+
+
+BoundingBox::BoundingBox() {
+    //Default Constructor.
+}
+
+BoundingBox::BoundingBox(Triangle& tri) {
+    Point& v1 = tri.getv1();
+    Point& v2 = tri.getv2();
+    Point& v3 = tri.getv3();
+    xmax = max(v1.get_x(), v2.get_x(), v3.get_x());
+    ymax = max(v1.get_y(), v2.get_y(), v3.get_y());
+    zmax = max(v1.get_z(), v2.get_z(), v3.get_z());
+    xmin = min(v1.get_x(), v2.get_x(), v3.get_x());
+    ymin = min(v1.get_y(), v2.get_y(), v3.get_y());
+    zmin = min(v1.get_z(), v2.get_z(), v3.get_z());
+}
+
+BoundingBox::BoundingBox(Sphere& sphere) {
+    Point center = sphere.getCenter();
+    xmax = center.get_x() + sphere.getRadius();
+    ymax = center.get_y() + sphere.getRadius();
+    zmax = center.get_z() + sphere.getRadius();
+    xmin = center.get_x() - sphere.getRadius();
+    ymin = center.get_y() - sphere.getRadius();
+    zmin = center.get_z() - sphere.getRadius();
+}
+
+BoundingBox::BoundingBox(BoundingBox& bb1, BoundingBox& bb2) {
+    xmax = max(bb1.xmax, bb2.xmax);
+    ymax = max(bb1.ymax, bb2.ymax);
+    zmax = max(bb1.zmax, bb2.zmax);
+    xmin = min(bb1.xmin, bb2.xmin);
+    ymin = min(bb1.ymin, bb2.ymin);
+    zmin = min(bb1.zmin, bb2.zmin);
+}
+
+bool BoundingBox::intersect(Ray& ray, float* thit, LocalGeo* local) {
+    exit(1);
+    //This should never be called. 
+}
+
+bool BoundingBox::intersectP(Ray& ray) {
+    Point rayPos = ray.get_pos();
+    Vector rayDir = ray.get_dir();
+    float txmin, txmax, tymin, tymax, tzmin, tzmax;
+    float alphax = 1 / rayDir.get_x();
+    if (alphax >= 0) {
+        txmin = alphax * (xmin - rayPos.get_x());
+        txmax = alphax * (xmax - rayPos.get_x());
+    } else {
+        txmin = alphax * (xmax - rayPos.get_x());
+        txmax = alphax * (xmin - rayPos.get_x());
+    }
+    float alphay = 1 / rayDir.get_y();
+    if (alphay >= 0) {
+        tymin = alphay * (ymin - rayPos.get_y());
+        tymax = alphay * (ymax - rayPos.get_y());
+    } else {
+        tymin = alphay * (ymax - rayPos.get_y());
+        tymax = alphay * (ymin - rayPos.get_y());
+    }
+
+    float alphaz = 1 / rayDir.get_z();
+    if (alphaz >= 0) {
+        tzmin = alphaz * (zmin - rayPos.get_z());
+        tzmax = alphaz * (zmax - rayPos.get_z());
+    } else {
+        tzmin = alphaz * (zmax - rayPos.get_z());
+        tzmax = alphaz * (zmin - rayPos.get_z());
+    }
+    if (txmin > tymax || tymin > tzmax || tzmin > txmax) {
         return false;
     }
     return true;
@@ -1103,6 +1346,15 @@ bool AggregatePrimitive::intersectP(Ray& ray) {
 void AggregatePrimitive::getBRDF(LocalGeo& local, BRDF* brdf) {
     exit(1);
     //Should never enter here.
+}
+
+HBB::HBB(vector<Primitives*> list, int axis) {
+    int len = list.size();
+    if (len == 1) {
+        left = list.at(0);
+        right = NULL;
+        bbox = *new BoundingBox(list.at(0).shape);
+    }
 }
 /**END IMPLEMENTATION FOR AGGREGATE PRIMITIVE. **/
 
@@ -1285,7 +1537,7 @@ void DirectionalLight::generateLightRay(LocalGeo& local, Ray* ray, Color* lcolor
     ray->update_origin(local.get_pos());
     ray->update_dir(_dir * -1);
     ray->update_tmax(INFINITY);
-    ray->update_tmin(1);
+    ray->update_tmin(.1);
     lcolor->setValue(_intensity);
 }
 
