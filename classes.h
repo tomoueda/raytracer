@@ -5,6 +5,8 @@
 #include <Eigen/Dense>
 
 using namespace cimg_library;
+using namespace Eigen;
+using namespace std;
 
 class Vector;
 class Normal;
@@ -13,8 +15,10 @@ class Shape;
 class Material;
 class Intersection;
 class Light;
+class BoundingBox;
+class Primitive;
 
-using namespace Eigen;
+
 
 class Vector {
     friend class Point;
@@ -224,7 +228,7 @@ class Shape {
 public:
     virtual bool intersect(Ray& ray, float* thit, LocalGeo* local) = 0;
     virtual bool intersectP(Ray& ray) = 0;
-    virtual BoundingBox createBoundingBox() = 0;
+    virtual BoundingBox& createBoundingBox() = 0;
 };
 
 class Sphere: public Shape {
@@ -236,6 +240,7 @@ public:
     bool intersectP(Ray& ray);
     Point& getCenter();
     float getRadius();
+    BoundingBox& createBoundingBox();
 };
 
 class Triangle: public Shape {
@@ -247,6 +252,7 @@ public:
     Point& getv1();
     Point& getv2();
     Point& getv3();
+    BoundingBox& createBoundingBox();
 };
 
 class VertexTriangle: public Shape {
@@ -258,15 +264,21 @@ public:
     Vertex& getv1();
     Vertex& getv2();
     Vertex& getv3();
+    BoundingBox& createBoundingBox();
 };
 
 class BoundingBox: public Shape {
-    float xmin, xmax, ymin, ymax, zmin, zmax;
+    float _xmin, _xmax, _ymin, _ymax, _zmin, _zmax;
 public:
     BoundingBox();
-    BoundingBox(Primitive* primitive);
+    BoundingBox(vector<Primitive*> list);
+    BoundingBox(BoundingBox& bb1, BoundingBox& bb2);
+    BoundingBox(float xmax, float ymax, float zmax,
+        float xmin, float ymin, float zmin);
     bool intersect(Ray& ray, float* thit, LocalGeo* local);
     bool intersectP(Ray& ray);
+    BoundingBox& createBoundingBox();
+    float getCenter(int axis);
 };
 
 class Primitive {
@@ -274,7 +286,7 @@ public:
     virtual bool intersect(Ray &ray, float *thit, Intersection *in) = 0;
     virtual bool intersectP(Ray &ray) = 0;
     virtual void getBRDF(LocalGeo &local, BRDF *brdf) = 0;
-    virtual BoundingBox createBoundingBox() = 0;
+    virtual BoundingBox& createBoundingBox() = 0;
 };
 
 class Intersection {
@@ -299,7 +311,7 @@ public:
     bool intersect(Ray &ray, float *thit, Intersection *in);
     bool intersectP(Ray &ray);
     void getBRDF(LocalGeo &local, BRDF *brdf);
-    BoundingBox createBoundingBox();
+    BoundingBox& createBoundingBox();
 };
 
 class AggregatePrimitive: public Primitive {
@@ -310,18 +322,24 @@ public:
     bool intersect(Ray &ray, float *thit, Intersection *in);
     bool intersectP(Ray &ray);
     void getBRDF(LocalGeo &local, BRDF *brdf);
-    BoundingBox createBoundingBox();
+    BoundingBox& createBoundingBox();
 };
 
 class HBB : public Primitive {
-    Primitive* left;
-    Primitive* right;
-    BoundingBox bbox;
+    Primitive* _left;
+    Primitive* _right;
+    BoundingBox _bbox;
 public:
+    HBB();
     HBB(vector<Primitive*> list, int axis);
     bool intersect(Ray& ray, float* thit, Intersection* in);
-    bool intersectP(Rar& ray);
+    bool intersectP(Ray& ray);
     void getBRDF(LocalGeo& local, BRDF* brdf);
+    void splitSpace(vector<Primitive*> list,
+        vector<Primitive*>* firstHalf, vector<Primitive*>* secondHalf,
+        float center, int axis);
+    BoundingBox& createBoundingBox();
+    BoundingBox& makeListBox(vector<Primitive*> list);
 };
 
 class Material {
@@ -360,7 +378,7 @@ public:
 class RayTracer {
     float _thit;
     Intersection _in;
-    AggregatePrimitive _primitives;
+    HBB _primitives;
     Ray _lray;
     std::vector<Light*> _lights;
     Color _lcolor;
@@ -368,7 +386,7 @@ class RayTracer {
     Point _eye;
 public:
     RayTracer();
-    RayTracer(AggregatePrimitive& primitives,
+    RayTracer(HBB& primitives,
         std::vector<Light*> lights, Point& cameraPos);
     void trace(Ray &ray, int depth, Color *color);
     Color& shading(LocalGeo& local, BRDF& brdf, Ray& lray, Color& lcolor);

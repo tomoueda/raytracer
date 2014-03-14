@@ -464,7 +464,7 @@ TEST(final, final_destination) {
 	primitives.push_back(beta);
 	primitives.push_back(gamma);
 	primitives.push_back(delta);
-	AggregatePrimitive prims(primitives);
+	HBB prims(primitives, 0);
 	Point light1 (500, 500, 500);
 	Point light2 (0, -1000, 0);
 	Color l1(1, 1, 1);

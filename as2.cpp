@@ -263,7 +263,7 @@ void parseInputLine(std::vector<std::string> line) {
 
 /** Sets up all necessary components and starts rendering. **/
 void render() {
-    AggregatePrimitive agg(primitives);
+    HBB agg(primitives, 0);
     RayTracer rayTracer(agg, lights, camera.getCameraPos());
     CImg<float> img(width, height, 1, 3);
     Film film(img, false, filename.c_str());
