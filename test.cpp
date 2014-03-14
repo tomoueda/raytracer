@@ -419,7 +419,7 @@ TEST(final, final_destination) {
 	Camera camera(640, 480, cameraPos, lookingAt, up, fov);
 	TransMatrix mat;
 	Point cen(-1, 0, 0);
-	mat.add_translation(0, 0, -175);
+	mat.add_translation(0, 390, -175);
 	// mat.add_rotation(cen, pi/2);
 	// mat.add_scaling(2, 1, 1);
 	Transformation t(mat);

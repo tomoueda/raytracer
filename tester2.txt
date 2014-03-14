@@ -1,12 +1,14 @@
 size 1080 720
 maxdepth 5
-output ojb.jpg
-camera 0 0 500 0 0 300 0 1 0 1.57079632679
+output teapot.jpg
+point 11 11 11 1 1 1
+camera 50 0 0 40 0 0 0 1 0 1.57079632679
 diffuse .8 .8 .3
 specular .9 .4 .6
 ambient .4 .2 .4
-reflect .2 .3 .3
+reflect 0 0 0
 shininess 16
+
 v  5.929688 4.125000 0.000000
 v  5.832031 4.494141 0.000000
 v  5.945313 4.617188 0.000000

@@ -1,4 +1,3 @@
-// #include <GraphicsMagick/Magick++.h>
 #include <stdlib.h>
 #include <vector>
 #include <CImg.h>
@@ -1042,7 +1041,7 @@ bool Triangle::intersect(Ray& ray, float* thit, LocalGeo* local) {
     }
     *thit = t;
     Point pos = ray.get_pos_with_t(t);
-    Vector norm_dir = k.cross_product(j);
+    Vector norm_dir = j.cross_product(k);
     Normal norm = norm_dir.get_normal();
     local->set_norm(norm);
     local->set_pos(pos);
@@ -1226,6 +1225,8 @@ BoundingBox::BoundingBox(BoundingBox& bb1, BoundingBox& bb2) {
     _xmin = min(bb1._xmin, bb2._xmin);
     _ymin = min(bb1._ymin, bb2._ymin);
     _zmin = min(bb1._zmin, bb2._zmin);
+    _max = *new Point(_xmax, _ymax, _zmax);
+    _min = *new Point(_xmin, _ymin, _zmin);
 }
 
 BoundingBox::BoundingBox(float xmax, float ymax, float zmax,
@@ -1236,6 +1237,30 @@ BoundingBox::BoundingBox(float xmax, float ymax, float zmax,
     _xmin = xmin;
     _ymin = ymin;
     _zmin = zmin;
+    _max = *new Point(_xmax, _ymax, _zmax);
+    _min = *new Point(_xmin, _ymin, _zmin);
+}
+
+BoundingBox::BoundingBox(Point& max, Point& min) {
+    _xmax = max.get_x();
+    _ymax = max.get_y();
+    _zmax = max.get_z();
+    _xmin = min.get_x();
+    _ymin = min.get_y();
+    _zmin = min.get_z();
+    _max = max;
+    _min = min;
+}
+
+void BoundingBox::extend(BoundingBox& bb) {
+    _xmax = max(_xmax, bb._xmax);
+    _ymax = max(_ymax, bb._ymax);
+    _zmax = max(_zmax, bb._zmax);
+    _xmin = min(_xmin, bb._xmin);
+    _ymin = min(_ymin, bb._ymin);
+    _zmin = min(_zmin, bb._zmin);
+    _max = *new Point(_xmax, _ymax, _zmax);
+    _min = *new Point(_xmin, _ymin, _zmin);
 }
 
 bool BoundingBox::intersect(Ray& ray, float* thit, LocalGeo* local) {
@@ -1296,6 +1321,19 @@ float BoundingBox::getCenter(int axis) {
         return (_zmax + _zmin) / 2;
     }
     return (float) NULL;
+}
+
+void BoundingBox::debug() {
+    LOG(INFO) << "max: (" << _xmax << ", " << _ymax << ", " << _zmax << "), " << "min: ("
+        << _xmin << ", " << _ymin << ", " << _zmin << ")";
+}
+
+Point& BoundingBox::getMax() {
+    return _max;
+}
+
+Point& BoundingBox::getMin() {
+    return _min;
 }
 
 /** END SHAPE IMPLEMENTATION. **/
@@ -1361,7 +1399,18 @@ void GeometricPrimitive::getBRDF(LocalGeo& local, BRDF* brdf) {
 }
 
 BoundingBox& GeometricPrimitive::createBoundingBox() {
-    return _shape->createBoundingBox();
+    BoundingBox newBox = _shape->createBoundingBox();
+    Point newMax = newBox.getMax();
+    Point newMin = newBox.getMin();
+    newMax = _objToWorld * newMax;
+    newMin = _objToWorld * newMin;
+    return *new BoundingBox(newMax, newMin);
+    // return _shape->createBoundingBox();
+}
+
+void GeometricPrimitive::debug() {
+    LOG(INFO) << "I am a geometric Primitive";
+    _shape->createBoundingBox().debug();
 }
 /**END IMPLEMENTATION FOR GEOMETRIC PRIMITIVE. **/
 
@@ -1402,49 +1451,60 @@ BoundingBox& AggregatePrimitive::createBoundingBox() {
     //will implement later.
 }
 
+void AggregatePrimitive::debug() {
+    exit(1);
+}
+
 HBB::HBB() {
     //Default Constructor.
 }
 
 HBB::HBB(vector<Primitive*> list, int axis) {
     int len = list.size();
-    if (len == 1) {
-        _left = list.at(0);
-        _right = NULL;
-        _bbox = list.at(0)->createBoundingBox();
-    } else if (len == 2) {
-        _left = list.at(0);
-        _right = list.at(1);
-        _bbox = *new BoundingBox(list.at(0)->createBoundingBox(),
-           list.at(1)->createBoundingBox());
+    if (len != 0) {
+        if (len == 1) {
+            _left = list.at(0);
+            _right = NULL;
+            _bbox = list.at(0)->createBoundingBox();
+            _bbox.debug();
+        } else if (len == 2) {
+            _left = list.at(0);
+            _right = list.at(1);
+            _bbox = *new BoundingBox(list.at(0)->createBoundingBox(),
+               list.at(1)->createBoundingBox());
+            _bbox.debug();
+        } else {
+            BoundingBox listbox = makeListBox(list);
+            float center = listbox.getCenter(axis);
+            vector<Primitive*>* firstHalf = new vector<Primitive*>();
+            vector<Primitive*>* secondHalf = new vector<Primitive*>();
+            splitSpace(list, firstHalf, secondHalf, center, axis);
+            _left = new HBB(*firstHalf, (axis + 1) % 3);
+            _right = new HBB(*secondHalf, (axis + 1) % 3);
+            _bbox = *new BoundingBox(_left->createBoundingBox(),
+               _right->createBoundingBox());
+        }
     } else {
-        BoundingBox listbox = makeListBox(list);
-        float center = listbox.getCenter(axis);
-        vector<Primitive*>* firstHalf = new vector<Primitive*>();
-        vector<Primitive*>* secondHalf = new vector<Primitive*>();
-        splitSpace(list, firstHalf, secondHalf, center, axis);
-        _left = new HBB(*firstHalf, (axis + 1) % 3);
-        _right = new HBB(*secondHalf, (axis + 1) % 3);
-        _bbox = *new BoundingBox(_left->createBoundingBox(),
-           _right->createBoundingBox());
+        _left = NULL;
+        _right = NULL;
     }
 }
 
 BoundingBox& HBB::makeListBox(vector<Primitive*> list) {
     BoundingBox* bb = new BoundingBox(list.at(0)->createBoundingBox(),
-        list.at(0)->createBoundingBox());
-    for (int i = 0; i < list.size(); i++) {
-        bb = new BoundingBox(*bb, list.at(i)->createBoundingBox());
+        list.at(1)->createBoundingBox());
+    for (int i = 2; i < list.size(); i++) {
+        bb->extend(list.at(2)->createBoundingBox());
     }
     return *bb;
 }
 
 bool HBB::intersect(Ray& ray, float* thit, Intersection* in) {
     if (_bbox.intersectP(ray)) {
-        Intersection* leftIn;
-        Intersection* rightIn;
-        float* leftT;
-        float* rightT;
+        Intersection* leftIn = new Intersection();
+        Intersection* rightIn = new Intersection();
+        float* leftT = new float();
+        float* rightT = new float();
         bool leftHit = _left != NULL;
         if (leftHit) {
            leftHit = _left->intersect(ray, leftT, leftIn);
@@ -1455,20 +1515,24 @@ bool HBB::intersect(Ray& ray, float* thit, Intersection* in) {
         }
         if (leftHit && rightHit) {
             if (*leftT < *rightT) {
-                thit = leftT;
-                in = leftIn;
+                *thit = *leftT;
+                in->set_local(leftIn->get_localGeo());
+                in->set_primitive(leftIn->get_primitive());
             } else {
-                thit = rightT;
-                in = rightIn;
+                *thit = *rightT;
+                in->set_local(rightIn->get_localGeo());
+                in->set_primitive(rightIn->get_primitive());
             }
             return true;
         } else if (leftHit) {
-            thit = leftT;
-            in = leftIn;
+            *thit = *leftT;
+            in->set_local(leftIn->get_localGeo());
+            in->set_primitive(leftIn->get_primitive());
             return true;
         } else if (rightHit) {
-            thit = rightT;
-            in = rightIn;
+            *thit = *rightT;
+            in->set_local(rightIn->get_localGeo());
+            in->set_primitive(rightIn->get_primitive());
             return true;
         }
     }
@@ -1506,16 +1570,28 @@ void HBB::splitSpace(vector<Primitive*> list, vector<Primitive*>* firstHalf,
     for (int i = 0; i < list.size(); i++) {
         Primitive* primitive = list.at(i);
         float pCenter = primitive->createBoundingBox().getCenter(axis);
-        if (pCenter >= center) {
+        if (pCenter > center) {
             firstHalf->push_back(primitive);
-        } else {
+        } else if (pCenter < center) {
             secondHalf->push_back(primitive);
+        } else {
+            int random = rand() % 100 + 1; 
+            if (random > 50) {
+                firstHalf->push_back(primitive);
+            } else {
+                secondHalf->push_back(primitive);
+            }
         }
     }
 }
 
 BoundingBox& HBB::createBoundingBox() {
     return _bbox;
+}
+
+void HBB::debug() {
+    LOG(INFO) << "I am a HBB";
+    _bbox.debug();
 }
 /**END IMPLEMENTATION FOR AGGREGATE PRIMITIVE. **/
 
@@ -1549,6 +1625,7 @@ bool Sampler::generateSample(Sample* sample) {
         _currY += 1;
         _currX = 0;
     }
+    LOG(INFO) << "x: " << _currX << " y: " << _currY;
     if (_currY == _height) return false;
     sample->update_x(_currX);
     sample->update_y(_currY);
@@ -1615,6 +1692,14 @@ RayTracer::RayTracer(HBB& primitives,
     _cameraPos = cameraPos;
 }
 
+RayTracer::RayTracer(AggregatePrimitive& primitives, 
+    std::vector<Light*> lights, Point& cameraPos) {
+    _thit = INFINITY;
+    _list = primitives;
+    _lights = lights;
+    _cameraPos = cameraPos;
+}
+
 void RayTracer::trace(Ray& ray, int depth, Color* color) {
     Color tempColor;
     BRDF brdf;
@@ -1645,6 +1730,36 @@ void RayTracer::trace(Ray& ray, int depth, Color* color) {
     _eye = _cameraPos;
 }
 
+void RayTracer::traceUsingList(Ray& ray, int depth, Color* color) {
+    Color tempColor;
+    BRDF brdf;
+    Ray lray;
+    Color lcolor;
+    color->black();
+    if (depth == 0) {
+        color->black();
+    } else {
+        if (!_list.intersect(ray, &_thit, &_in)) {
+            color->black();
+        } else {
+            _in.get_primitive()->getBRDF(_in.get_localGeo(), &brdf);
+            for (int i = 0; i < _lights.size(); i++) {
+                _lights.at(i)->generateLightRay(_in.get_localGeo(), &lray, &lcolor);
+                if (!_list.intersectP(lray)) {
+                    *color += shading(_in.get_localGeo(), brdf, lray, lcolor);
+                }
+            }
+
+            if (brdf.isReflect()) {
+                Ray reflectRay = createReflectRay(_in.get_localGeo(), ray);
+                traceUsingList(reflectRay, depth-1, &tempColor);
+                *color += brdf.get_kr() * tempColor;
+            }
+        }
+    }
+    _eye = _cameraPos;
+}
+
 Color& RayTracer::shading(LocalGeo& local, BRDF& brdf, 
     Ray& lray, Color& lcolor) {
     Color* shade = new Color();
@@ -1668,7 +1783,7 @@ Color& RayTracer::shading(LocalGeo& local, BRDF& brdf,
 }
 
 Ray& RayTracer::createReflectRay(LocalGeo& local, Ray& ray) {
-    float tmin = .01;
+    float tmin = .1;
     float tmax = INFINITY;
     Point& point = local.get_pos();
     Normal norm = local.get_norm();
@@ -1770,6 +1885,15 @@ void Scene::render() {
     while(_sampler.generateSample(&_sample)) {
         _camera.generateRay(_sample, &_ray);
         _raytracer.trace(_ray, _depth, &_color);
+        _film.commit(_sample, _color);
+    }
+    _film.writeImage();
+}
+
+void Scene::renderUsingList() {
+    while(_sampler.generateSample(&_sample)) {
+        _camera.generateRay(_sample, &_ray);
+        _raytracer.traceUsingList(_ray, _depth, &_color);
         _film.commit(_sample, _color);
     }
     _film.writeImage();

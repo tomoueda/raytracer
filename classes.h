@@ -269,16 +269,21 @@ public:
 
 class BoundingBox: public Shape {
     float _xmin, _xmax, _ymin, _ymax, _zmin, _zmax;
+    Point _max, _min;
 public:
     BoundingBox();
-    BoundingBox(vector<Primitive*> list);
     BoundingBox(BoundingBox& bb1, BoundingBox& bb2);
+    BoundingBox(Point& max, Point& min);
     BoundingBox(float xmax, float ymax, float zmax,
         float xmin, float ymin, float zmin);
     bool intersect(Ray& ray, float* thit, LocalGeo* local);
     bool intersectP(Ray& ray);
     BoundingBox& createBoundingBox();
     float getCenter(int axis);
+    void extend(BoundingBox& bb);
+    void debug();
+    Point& getMax();
+    Point& getMin();
 };
 
 class Primitive {
@@ -287,6 +292,7 @@ public:
     virtual bool intersectP(Ray &ray) = 0;
     virtual void getBRDF(LocalGeo &local, BRDF *brdf) = 0;
     virtual BoundingBox& createBoundingBox() = 0;
+    virtual void debug() = 0;
 };
 
 class Intersection {
@@ -312,6 +318,7 @@ public:
     bool intersectP(Ray &ray);
     void getBRDF(LocalGeo &local, BRDF *brdf);
     BoundingBox& createBoundingBox();
+    void debug();
 };
 
 class AggregatePrimitive: public Primitive {
@@ -323,6 +330,7 @@ public:
     bool intersectP(Ray &ray);
     void getBRDF(LocalGeo &local, BRDF *brdf);
     BoundingBox& createBoundingBox();
+    void debug();
 };
 
 class HBB : public Primitive {
@@ -340,6 +348,7 @@ public:
         float center, int axis);
     BoundingBox& createBoundingBox();
     BoundingBox& makeListBox(vector<Primitive*> list);
+    void debug();
 };
 
 class Material {
@@ -379,6 +388,7 @@ class RayTracer {
     float _thit;
     Intersection _in;
     HBB _primitives;
+    AggregatePrimitive _list;
     Ray _lray;
     std::vector<Light*> _lights;
     Color _lcolor;
@@ -388,7 +398,10 @@ public:
     RayTracer();
     RayTracer(HBB& primitives,
         std::vector<Light*> lights, Point& cameraPos);
+    RayTracer(AggregatePrimitive& primitives,
+        std::vector<Light*> lights, Point& cameraPos);
     void trace(Ray &ray, int depth, Color *color);
+    void traceUsingList(Ray &ray, int depth, Color *color);
     Color& shading(LocalGeo& local, BRDF& brdf, Ray& lray, Color& lcolor);
     Ray& createReflectRay(LocalGeo& geo, Ray& ray);
 };
@@ -441,4 +454,5 @@ public:
     Scene(Sampler& sampler, Camera& camera,
        RayTracer& raytracer, Film& film, int depth);
     void render();
+    void renderUsingList();
 };

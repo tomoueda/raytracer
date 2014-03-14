@@ -1,3 +1,5 @@
+
+#include <time.h>
 #include <iostream>
 #include <vector>
 #include <fstream>
@@ -139,18 +141,53 @@ void parseInputLine(std::vector<std::string> line) {
         Normal normal(x, y, z);
         normals.push_back(normal);
     } else if (!line.at(0).compare("f")) {
-        vector<string> sv1 = split(line.at(1), '/');
-        vector<string> sv2 = split(line.at(2), '/');
-        vector<string> sv3 = split(line.at(3), '/');
-        Vertex v1(vertexes.at(atoi(sv1.at(0).c_str()) - 1), normals.at(atoi(sv1.at(2).c_str()) - 1));
-        Vertex v2(vertexes.at(atoi(sv2.at(0).c_str()) - 1), normals.at(atoi(sv2.at(2).c_str()) - 1));
-        Vertex v3(vertexes.at(atoi(sv3.at(0).c_str()) - 1), normals.at(atoi(sv3.at(2).c_str()) - 1));
-        VertexTriangle* tri = new VertexTriangle(v1, v2, v3);
-        Transformation t(currMatrix);
-        BRDF brdf(kd, ks, ka, kr, sp);
-        Material* material = new Material(brdf);
-        GeometricPrimitive* vertri = new GeometricPrimitive(t, tri, material);
-        primitives.push_back(vertri);
+        if (line.at(1).find('/') != string::npos) {
+            vector<string> sv1 = split(line.at(1), '/');
+            vector<string> sv2 = split(line.at(2), '/');
+            vector<string> sv3 = split(line.at(3), '/');
+            Vertex v1(vertexes.at(atoi(sv1.at(0).c_str()) - 1), normals.at(atoi(sv1.at(2).c_str()) - 1));
+            Vertex v2(vertexes.at(atoi(sv2.at(0).c_str()) - 1), normals.at(atoi(sv2.at(2).c_str()) - 1));
+            Vertex v3(vertexes.at(atoi(sv3.at(0).c_str()) - 1), normals.at(atoi(sv3.at(2).c_str()) - 1));
+            VertexTriangle* tri = new VertexTriangle(v1, v2, v3);
+            Transformation t(currMatrix);
+            BRDF brdf(kd, ks, ka, kr, sp);
+            Material* material = new Material(brdf);
+            GeometricPrimitive* vertri = new GeometricPrimitive(t, tri, material);
+            primitives.push_back(vertri);
+        } else {
+            int len = line.size();
+            if (len == 4) {
+                Point v1 = vertexes.at(atoi(line.at(1).c_str())-1);
+                Point v2 = vertexes.at(atoi(line.at(2).c_str())-1);
+                Point v3 = vertexes.at(atoi(line.at(3).c_str())-1);
+                Triangle* tri = new Triangle(v1, v2, v3);
+                Transformation t(currMatrix);
+                BRDF brdf(kd, ks, ka, kr, sp);
+                Material* material = new Material(brdf);
+                GeometricPrimitive* triangle = new GeometricPrimitive(t, tri, material);
+                primitives.push_back(triangle);
+            } else if (len == 5) {
+                Point v1 = vertexes.at(atoi(line.at(1).c_str())-1);
+                Point v2 = vertexes.at(atoi(line.at(2).c_str())-1);
+                Point v3 = vertexes.at(atoi(line.at(3).c_str())-1);
+                Triangle* tri = new Triangle(v1, v2, v3);
+                Transformation t(currMatrix);
+                BRDF brdf(kd, ks, ka, kr, sp);
+                Material* material = new Material(brdf);
+                GeometricPrimitive* triangle = new GeometricPrimitive(t, tri, material);
+                primitives.push_back(triangle);
+
+                Point v4 = vertexes.at(atoi(line.at(2).c_str())-1);
+                Point v5 = vertexes.at(atoi(line.at(3).c_str())-1);
+                Point v6 = vertexes.at(atoi(line.at(4).c_str())-1);
+                Triangle* tri2 = new Triangle(v4, v5, v6);
+                Transformation t2(currMatrix);
+                BRDF brdf2(kd, ks, ka, kr, sp);
+                Material* material2 = new Material(brdf2);
+                GeometricPrimitive* triangle2 = new GeometricPrimitive(t2, tri2, material2);
+                primitives.push_back(triangle2);
+            }
+        }
     } else if (!line.at(0).compare("vertexnormal")) {
         float x = atof(line.at(1).c_str());
         float y = atof(line.at(2).c_str());
@@ -163,9 +200,9 @@ void parseInputLine(std::vector<std::string> line) {
         Vertex vex(pos, norm);
         Nvertexes.push_back(vex);
     } else if (!line.at(0).compare("trinormal")) {
-        Vertex v1 = Nvertexes.at(atoi(line.at(1).c_str()));
-        Vertex v2 = Nvertexes.at(atoi(line.at(2).c_str()));
-        Vertex v3 = Nvertexes.at(atoi(line.at(3).c_str()));
+        Vertex v1 = Nvertexes.at(atoi(line.at(1).c_str()) - 1);
+        Vertex v2 = Nvertexes.at(atoi(line.at(2).c_str()) - 1);
+        Vertex v3 = Nvertexes.at(atoi(line.at(3).c_str()) - 1);
         VertexTriangle* vt = new VertexTriangle(v1, v2, v3);
         Transformation t(currMatrix);
         BRDF brdf(kd, ks, ka, kr, sp);
@@ -173,15 +210,15 @@ void parseInputLine(std::vector<std::string> line) {
         GeometricPrimitive* vtgp = new GeometricPrimitive(t, vt, material);
         primitives.push_back(vtgp);
     } else if (!line.at(0).compare("tri")) {
-        Point v1 = vertexes.at(atoi(line.at(1).c_str()));
-        Point v2 = vertexes.at(atoi(line.at(2).c_str()));
-        Point v3 = vertexes.at(atoi(line.at(3).c_str()));
+        Point v1 = vertexes.at(atoi(line.at(1).c_str())-1);
+        Point v2 = vertexes.at(atoi(line.at(2).c_str())-1);
+        Point v3 = vertexes.at(atoi(line.at(3).c_str())-1);
         Triangle* tri = new Triangle(v1, v2, v3);
         Transformation t(currMatrix);
         BRDF brdf(kd, ks, ka, kr, sp);
         Material* material = new Material(brdf);
         GeometricPrimitive* triangle = new GeometricPrimitive(t, tri, material);
-        primitives.push_back(triangle); 
+        primitives.push_back(triangle);
     } else if (!line.at(0).compare("pushTransform")) {
         canPush = true;
     } else if (!line.at(0).compare("popTransform")) {
@@ -271,6 +308,15 @@ void render() {
     scene.render();
 }
 
+void renderUsingList() {
+    AggregatePrimitive agg(primitives);
+    RayTracer rayTracer(agg, lights, camera.getCameraPos());
+    CImg<float> img(width, height, 1, 3);
+    Film film(img, false, filename.c_str());
+    Scene scene(sampler, camera, rayTracer, film, depth);
+    scene.renderUsingList();
+}
+
 /** A function that splits STRING, by a DELIMiter, and stores it 
     in ELEM. Returns elem, which is a vector containing the split
     string. Disclaimer found this method on stack overflow. **/
@@ -300,8 +346,18 @@ int main(int argc, char **argv) {
         ::testing::InitGoogleTest(&argc, argv);
         return RUN_ALL_TESTS();
     }
+    clock_t start, end;
+
+    start = clock();
     parseInput();
     render();
+    end = clock();
+    LOG(INFO) << "HBB: Time required for execution: " << (double)(end-start)/CLOCKS_PER_SEC << " seconds.";
 
+    // start = clock();
+    // parseInput();
+    // renderUsingList();
+    // end = clock();
+    // LOG(INFO) << "LIST: Time required for execution: " << (double)(end-start)/CLOCKS_PER_SEC << " seconds.";
     return 0;
 }
