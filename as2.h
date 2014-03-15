@@ -4,7 +4,6 @@
 #include <stdio.h> 
 #include <gflags/gflags.h>
 #include <glog/logging.h>
-#include <GraphicsMagick/Magick++.h>
 #include <CImg.h>
 
 DECLARE_string(input);

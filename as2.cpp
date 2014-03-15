@@ -1,14 +1,12 @@
-
+#include <stdlib.h> 
 #include <time.h>
 #include <iostream>
 #include <vector>
 #include <fstream>
-#include <stdlib.h> 
 #include <stdio.h> 
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 #include <gtest/gtest.h>
-#include <GraphicsMagick/Magick++.h>
 #include <CImg.h>
 #include "as2.h"
 #include "classes.h"
@@ -177,7 +175,7 @@ void parseInputLine(std::vector<std::string> line) {
                 GeometricPrimitive* triangle = new GeometricPrimitive(t, tri, material);
                 primitives.push_back(triangle);
 
-                Point v4 = vertexes.at(atoi(line.at(2).c_str())-1);
+                Point v4 = vertexes.at(atoi(line.at(1).c_str())-1);
                 Point v5 = vertexes.at(atoi(line.at(3).c_str())-1);
                 Point v6 = vertexes.at(atoi(line.at(4).c_str())-1);
                 Triangle* tri2 = new Triangle(v4, v5, v6);

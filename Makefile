@@ -1,31 +1,29 @@
-CC = g++
+CC = clang++
 
-MAGIC = `bin/GraphicsMagick++-config --cppflags --cxxflags --ldflags --libs`
+INSTALLPATH = -I./include/ -I/opt/X11/include -g -DGL_GLEXT_PROTOTYPES -I/usr/X11/include -DOSX
 
-INSTALLPATH = -I./include -I/opt/X11/include
+LINKPATH = -L./lib -L/opt/X11/lib -L/usr/X11/lib
 
-LINKPATH = -L./lib -L/opt/X11/lib
-
-LDFLAG = -lgflags -lglog -lX11 -lgtest
+LDFLAG = -lgflags -lglog -lgtest -lX11
 
 DYLDPATHC = export DYLD_LIBRARY_PATH="${DYLD_LIBRARY_PATH}:./lib"
 
-UNAME = :$(shell, name)
+CHANGE = -stdlib=libc++
 
 
 main: as2.o classes.o
-	$(CC) $(INSTALLPATH) $(LINKPATH) $(LDFLAG) -o as2 as2.o classes.o
+	$(CC) $(INSTALLPATH) $(LINKPATH) $(LDFLAG) $(CHANGE) -o as2 as2.o classes.o
 
 as2.o: as2.cpp classes.cpp
 	$(DYLDPATHC)
-	$(CC) $(INSTALLPATH) -c as2.cpp -c classes.cpp
+	$(CC) $(INSTALLPATH) $(CHANGE)  -c as2.cpp -c classes.cpp
 
 test: test.o classes.o
-	$(CC) $(INSTALLPATH) $(LINKPATH) $(LDFLAG) -o test test.o classes.o
+	$(CC) $(INSTALLPATH) $(LINKPATH) $(LDFLAG) $(CHANGE) -o test test.o classes.o
 
 test.o: test.cpp
 	$(DYLDPATHC)
-	$(CC) $(INSTALLPATH) -c test.cpp
+	$(CC) $(INSTALLPATH) $(CHANGE) -c test.cpp
 
 clean: 
 	rm -rf *o as2 test

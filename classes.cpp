@@ -9,6 +9,7 @@
 #define EPSILON .0001
 using namespace Eigen;
 using namespace cimg_library;
+using namespace std;
 
 /** STATIC FUNCTIONS **/
 inline float sqr(float x) {
@@ -310,6 +311,10 @@ float Normal::dot_product(Vector &v) {
 
 void Normal::debug() {
     LOG(INFO) << "(" << _x << ", " << _y << ", " << _z << ")";
+}
+
+Vector& Normal::convertToVector() {
+    return *new Vector(_x, _y, _z);
 }
 
 /** End Normal implementation **/
@@ -1042,8 +1047,16 @@ bool Triangle::intersect(Ray& ray, float* thit, LocalGeo* local) {
     *thit = t;
     Point pos = ray.get_pos_with_t(t);
     Vector norm_dir = j.cross_product(k);
-    Normal norm = norm_dir.get_normal();
-    local->set_norm(norm);
+    Vector other_dir = k.cross_product(k);
+    float jkg = norm_dir.dot_product(ray.get_dir());
+    float kjg = other_dir.dot_product(ray.get_dir());
+    Normal normal;
+    if (jkg < kjg) {
+       normal = norm_dir.get_normal();
+    } else {
+       normal = other_dir.get_normal();
+    }
+    local->set_norm(normal);
     local->set_pos(pos);
     return true;
 }
@@ -1144,8 +1157,12 @@ bool VertexTriangle::intersect(Ray& ray, float* thit, LocalGeo* local) {
     *thit = t;
     Point pos = ray.get_pos_with_t(t);
     float alpha = 1 - (gamma + beta);
-    Normal norm = (_v1.get_norm() * alpha) + (_v2.get_norm() * beta) + (_v3.get_norm() * gamma);
-    local->set_norm(norm);
+    Vector normal1 = _v1.get_norm().convertToVector();
+    Vector normal2 = _v2.get_norm().convertToVector();
+    Vector normal3 = _v3.get_norm().convertToVector();
+    Vector normal = (normal1 * alpha) + (normal2 * beta) + (normal3 * gamma);
+    Normal newNormal = normal.get_normal();
+    local->set_norm(newNormal);
     local->set_pos(pos);
     return true;
 }

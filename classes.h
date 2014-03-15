@@ -67,6 +67,7 @@ public:
     Normal & operator*(float s);
     bool operator==(const Normal& n) const;
     bool operator!=(const Normal& n) const;
+    Vector& convertToVector();
     float get_x();
     float get_y();
     float get_z();
