@@ -22,6 +22,8 @@ using namespace std;
 */
 DEFINE_string(input, "null", "an input file with the extension .txt");
 DEFINE_bool(unittest, false, "set equal to one in order to run unit test.");
+DEFINE_int32(fishlens, 0, "Set the fish lens on and determine radius.");
+DEFINE_bool(display, false, "If set to 1 displays using gui.");
 
 /* 
     Global Variables
@@ -208,9 +210,9 @@ void parseInputLine(std::vector<std::string> line) {
         GeometricPrimitive* vtgp = new GeometricPrimitive(t, vt, material);
         primitives.push_back(vtgp);
     } else if (!line.at(0).compare("tri")) {
-        Point v1 = vertexes.at(atoi(line.at(1).c_str())-1);
-        Point v2 = vertexes.at(atoi(line.at(2).c_str())-1);
-        Point v3 = vertexes.at(atoi(line.at(3).c_str())-1);
+        Point v1 = vertexes.at(atoi(line.at(1).c_str()));
+        Point v2 = vertexes.at(atoi(line.at(2).c_str()));
+        Point v3 = vertexes.at(atoi(line.at(3).c_str()));
         Triangle* tri = new Triangle(v1, v2, v3);
         Transformation t(currMatrix);
         BRDF brdf(kd, ks, ka, kr, sp);
@@ -301,9 +303,18 @@ void render() {
     HBB agg(primitives, 0);
     RayTracer rayTracer(agg, lights, camera.getCameraPos());
     CImg<float> img(width, height, 1, 3);
-    Film film(img, false, filename.c_str());
+    Film film(img, FLAGS_display, filename.c_str());
     Scene scene(sampler, camera, rayTracer, film, depth);
     scene.render();
+}
+
+void renderFishLens(int radius) {
+    HBB agg(primitives, 0);
+    RayTracer rayTracer(agg, lights, camera.getCameraPos());
+    CImg<float> img(width, height, 1, 3);
+    Film film(img, false, filename.c_str());
+    Scene scene(sampler, camera, rayTracer, film, depth);
+    scene.renderFishLens(radius);
 }
 
 void renderUsingList() {
@@ -348,7 +359,11 @@ int main(int argc, char **argv) {
 
     start = clock();
     parseInput();
-    render();
+    if (FLAGS_fishlens > 0) {
+        renderFishLens(FLAGS_fishlens);
+    } else {
+        render();
+    }
     end = clock();
     LOG(INFO) << "HBB: Time required for execution: " << (double)(end-start)/CLOCKS_PER_SEC << " seconds.";
 

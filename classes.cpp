@@ -546,7 +546,7 @@ LocalGeo& Transformation::operator*(LocalGeo& l) {
 Transformation& Transformation::inv() {
     return *new Transformation(_m.inv());
 }
-
+ma
 
 /**END IMPLEMENTATION FOR MATRIX + TRANSFORMATION. **/
 
@@ -729,9 +729,9 @@ void Color::black() {
 }
 
 void Color::white() {
-    _r = 254;
-    _g = 254;
-    _b = 254;
+    _r = 1;
+    _g = 1;
+    _b = 1;
 }
 
 void Color::debug() {
@@ -1046,16 +1046,16 @@ bool Triangle::intersect(Ray& ray, float* thit, LocalGeo* local) {
     }
     *thit = t;
     Point pos = ray.get_pos_with_t(t);
-    Vector norm_dir = j.cross_product(k);
-    Vector other_dir = k.cross_product(k);
-    float jkg = norm_dir.dot_product(ray.get_dir());
-    float kjg = other_dir.dot_product(ray.get_dir());
-    Normal normal;
-    if (jkg < kjg) {
-       normal = norm_dir.get_normal();
-    } else {
-       normal = other_dir.get_normal();
-    }
+    Vector norm_dir = k.cross_product(j);
+    // Vector other_dir = j.cross_product(k);
+    // float jkg = norm_dir.dot_product(ray.get_dir());
+    // float kjg = other_dir.dot_product(ray.get_dir());
+    Normal normal = norm_dir.get_normal();
+    // if (jkg < kjg) {
+    //    normal = norm_dir.get_normal();
+    // } else {
+    //    normal = other_dir.get_normal();
+    // }
     local->set_norm(normal);
     local->set_pos(pos);
     return true;
@@ -1658,6 +1658,7 @@ Camera::Camera() {
 
 Camera::Camera(int width, int height, Point& pos, Point& looking,
     Vector& up, float fov) {
+    fov *= cimg::PI/180;
     _width = width;
     _height = height;
     _cameraPos = pos;
@@ -1668,14 +1669,16 @@ Camera::Camera(int width, int height, Point& pos, Point& looking,
     _right.normalize();
     _lookingAt = looking;
     float dif = abs(_cameraPos.get_z() - _lookingAt.get_z());
-    t = dif * tan(fov / 2);
+    t = dif*tan(fov / 2);
     b = -t;
-    r = t * width / float(height);
+    r = (t * width) / float(height);
     l = -r;
     LL = _lookingAt + _up * b + _right * l;
     LR = _lookingAt + _up * b + _right * r;
     UL = _lookingAt + _up * t + _right * l;
     UR = _lookingAt + _up * t + _right * r;
+    planeCenter = (LL * .5 + UL * (1 - .5)) * .5  + (LR * .5  + UR * (1 - .5)) * (1 - .5);
+    corner = (LL * 0 + UL * (1 - 0)) * 1  + (LR * 0  + UR * (1 - 0)) * (1 - 1);
 }
 
 void Camera::generateRay(Sample& sample, Ray* ray) {
@@ -1693,6 +1696,32 @@ void Camera::generateRay(Sample& sample, Ray* ray) {
 
 Point& Camera::getCameraPos() {
     return _cameraPos;
+}
+
+void Camera::generateRayFishLens(Sample& sample, Ray* ray, int radius) {
+    float x = sample.get_x();
+    float y = sample.get_y();
+    float u = (x + .5) / _width;
+    float v = (y + .5) / _height;
+
+    Point p = (LL * v + UL * (1 - v)) * u  + (LR * v  + UR * (1 - v)) * (1 - u);
+
+    float zCircleCenter = sqrt(sqr(radius) - sqr(corner.get_x() - planeCenter.get_x()) - sqr(corner.get_y() - planeCenter.get_y())) - corner.get_z();
+    //LOG(INFO) << "zCircleCenter" << zCircleCenter;
+
+    Vector lensSurfaceV =  p - *(new Point(planeCenter.get_x(), planeCenter.get_y(), zCircleCenter));
+    lensSurfaceV.normalize();
+    lensSurfaceV *= radius;
+
+
+    Point lensSurface = *(new Point(planeCenter.get_x(), planeCenter.get_y(), zCircleCenter)) + lensSurfaceV;
+    //LOG(INFO) << "lensSurface \t" << lensSurface.get_x() << "\t" << lensSurface.get_y() << "\t" << lensSurface.get_z();
+
+    Vector dir =  lensSurface - planeCenter;
+    ray->update_origin(p);
+    ray->update_dir(dir);
+    ray->update_tmin(0);
+    ray->update_tmax(INFINITY);
 }
 /**END IMPLEMENTATION FOR CAMERA. **/
 
@@ -1742,6 +1771,7 @@ void RayTracer::trace(Ray& ray, int depth, Color* color) {
                 trace(reflectRay, depth-1, &tempColor);
                 *color += brdf.get_kr() * tempColor;
             }
+            // color->white();
         }
     }
     _eye = _cameraPos;
@@ -1765,6 +1795,7 @@ void RayTracer::traceUsingList(Ray& ray, int depth, Color* color) {
                 if (!_list.intersectP(lray)) {
                     *color += shading(_in.get_localGeo(), brdf, lray, lcolor);
                 }
+                // color->white();
             }
 
             if (brdf.isReflect()) {
@@ -1792,7 +1823,7 @@ Color& RayTracer::shading(LocalGeo& local, BRDF& brdf,
     Vector k = (l * -1 + n * 2 * lnCosine);
     k.normalize();
     float keCosine = k.dot_product(e);
-    *shade += brdf.get_kd() * max(lnCosine, 0);
+    *shade += brdf.get_kd() * max(fabs(lnCosine), 0);
     *shade += brdf.get_ka();
     *shade += brdf.get_ks() * pow(max(keCosine, 0), brdf.get_sp());
     *shade *= lcolor;
@@ -1862,9 +1893,6 @@ Film::Film(CImg<float>& img, bool display, const char* filename) {
     _img = img;
     _filename = filename;
     _display = display;
-    if (display) {
-        CImgDisplay main_display(img);
-    }
 }
 
 void Film::commit(Sample& sample, Color& color) {
@@ -1872,15 +1900,18 @@ void Film::commit(Sample& sample, Color& color) {
     int y = sample.get_y();
     const float pixel[] = {color.get_r(), color.get_g(), color.get_b()};
     _img.draw_point(x, y, pixel);
-    if (_display) {
-        CImgDisplay main_display(_img);
-    }
 }
 
 void Film::writeImage() {
     LOG(INFO) << _filename;
     _img = scaleForJPG(_img);
     _img.save_jpeg(_filename);
+    if (_display) {
+        CImgDisplay main(_img);
+        while (!main.is_closed()) {
+            main.wait();
+        }
+    }
 }
 /**END IMPLEMENTATION FOR FILM. **/
 
@@ -1901,6 +1932,15 @@ Scene::Scene(Sampler& sampler, Camera& camera,
 void Scene::render() {
     while(_sampler.generateSample(&_sample)) {
         _camera.generateRay(_sample, &_ray);
+        _raytracer.trace(_ray, _depth, &_color);
+        _film.commit(_sample, _color);
+    }
+    _film.writeImage();
+}
+
+void Scene::renderFishLens(int radius) {
+    while(_sampler.generateSample(&_sample)) {
+        _camera.generateRayFishLens(_sample, &_ray, radius);
         _raytracer.trace(_ray, _depth, &_color);
         _film.commit(_sample, _color);
     }

@@ -377,11 +377,14 @@ class Camera {
     Vector _up;
     Vector _right;
     float t, b, r, l;
+    Point planeCenter;
+    Point corner;
 public:
     Camera();
     Camera(int width, int height, Point& pos, Point& looking,
         Vector& up, float fov);
     void generateRay(Sample& sample, Ray *ray);
+    void generateRayFishLens(Sample& sample, Ray* ray, int radius);
     Point& getCameraPos();
 };
 
@@ -455,5 +458,6 @@ public:
     Scene(Sampler& sampler, Camera& camera,
        RayTracer& raytracer, Film& film, int depth);
     void render();
+    void renderFishLens(int radius);
     void renderUsingList();
 };

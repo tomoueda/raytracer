@@ -1,6 +1,6 @@
 CC = clang++
 
-INSTALLPATH = -I./include/ -I/opt/X11/include -g -DGL_GLEXT_PROTOTYPES -I/usr/X11/include -DOSX
+INSTALLPATH = -I./include/ -I/opt/X11/include
 
 LINKPATH = -L./lib -L/opt/X11/lib -L/usr/X11/lib
 
@@ -10,19 +10,16 @@ DYLDPATHC = export DYLD_LIBRARY_PATH="${DYLD_LIBRARY_PATH}:./lib"
 
 CHANGE = -stdlib=libc++
 
-
 main: as2.o classes.o
 	$(CC) $(INSTALLPATH) $(LINKPATH) $(LDFLAG) $(CHANGE) -o as2 as2.o classes.o
 
 as2.o: as2.cpp classes.cpp
-	$(DYLDPATHC)
 	$(CC) $(INSTALLPATH) $(CHANGE)  -c as2.cpp -c classes.cpp
 
 test: test.o classes.o
 	$(CC) $(INSTALLPATH) $(LINKPATH) $(LDFLAG) $(CHANGE) -o test test.o classes.o
 
 test.o: test.cpp
-	$(DYLDPATHC)
 	$(CC) $(INSTALLPATH) $(CHANGE) -c test.cpp
 
 clean: 
@@ -33,6 +30,10 @@ fulltest:
 
 unittest:
 	GLOG_logtostderr=1 ./test
+
+dlyd:
+	$(DYLDPATHC)
+	$(DYLDPATHC)
 
 all:
 	make

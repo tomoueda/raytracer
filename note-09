@@ -1,0 +1,5 @@
+CommandLine to Run:
+
+GLOG_logtostderr=1 ./as2 -input input-09.txt
+
+This is a Teapot!
