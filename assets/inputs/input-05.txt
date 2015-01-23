@@ -1,0 +1,40 @@
+size 640 480
+maxdepth 5
+output image-05.jpg
+camera 0 0 0 0 0 300 0 1 0 1.57079632679
+point 200 200 200 1 1 1
+
+vertex 800 800 1000
+vertex -800 800 1000
+vertex 800 -800 1000
+vertex -800 -800 1000
+
+diffuse .9 .0 .0
+specular .9 .0 .0
+ambient .1 .1 .1
+reflect .4 .4 .4
+shininess 4
+
+tri 2 1 4
+tri 1 3 4
+
+diffuse .0 .9 .0
+specular .0 .9 .0
+ambient .1 .1 .1
+reflect .4 .4 .4
+shininess 4
+
+vertex 900 600 800
+vertex 900 400 800
+vertex 200 500 800
+
+tri 6 5 7
+
+diffuse .0 .4 .8
+specular .0 .4 .8
+ambient .1 .1 .1
+reflect .4 .4 .4
+shininess 4
+
+sphere -400 400 400 200
+sphere 300 -100 450 400
