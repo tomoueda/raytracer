@@ -1,5 +1,0 @@
-CommandLine to Run:
-
-GLOG_logtostderr=1 ./as2 -input input-07.txt
-
-Colliding spheres, and showing our ellipsoid:

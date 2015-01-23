@@ -1,5 +1,0 @@
-CommandLine to Run:
-
-GLOG_logtostderr=1 ./as2 -input tester.txt
-
-This image demonstrates the shadow and reflection produced by the ray tracer.
