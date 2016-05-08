@@ -1,8 +1,8 @@
 #include <iostream>
 #include <vector>
 #include <fstream>
-#include <stdlib.h> 
-#include <stdio.h> 
+#include <stdlib.h>
+#include <stdio.h>
 #include <iostream>
 #include <gflags/gflags.h>
 #include <glog/logging.h>
